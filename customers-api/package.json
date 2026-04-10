@@ -4,9 +4,12 @@
   "description": "Customers API — Backoffice B2B",
   "main": "src/app.js",
   "scripts": {
+    "build": "echo \"No build step needed for JS runtime\"",
     "start": "node src/app.js",
-    "dev":   "nodemon src/app.js",
-    "test":  "jest --coverage"
+    "dev": "nodemon src/app.js",
+    "migrate": "node scripts/db.js migrate",
+    "seed": "node scripts/db.js seed",
+    "test": "jest --coverage"
   },
   "dependencies": {
     "express":      "^4.19.2",
