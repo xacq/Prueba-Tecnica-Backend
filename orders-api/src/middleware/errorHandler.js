@@ -1,5 +1,12 @@
 'use strict';
 
+/**
+ * orders-api/src/middleware/errorHandler.js
+ *
+ * Traduce errores de validación, duplicados, dominio y fallos inesperados
+ * a respuestas HTTP consistentes para el servicio de órdenes.
+ */
+
 const { ZodError } = require('zod');
 
 function errorHandler(err, req, res, next) {

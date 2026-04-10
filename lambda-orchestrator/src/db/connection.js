@@ -5,9 +5,11 @@ const mysql = require('mysql2/promise');
 let pool = null;
 
 /**
+ * lambda-orchestrator/src/db/connection.js
+ *
  * Retorna el pool de conexiones, creándolo si no existe.
- * Lambda reutiliza el contexto de ejecución entre invocaciones
- * en caliente, por eso guardamos el pool en módulo-scope.
+ * Lambda reutiliza el contexto de ejecución entre invocaciones en caliente,
+ * por eso el pool queda en módulo-scope para reusarse entre requests.
  */
 function getPool() {
   if (pool) return pool;

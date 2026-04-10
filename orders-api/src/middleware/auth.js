@@ -2,6 +2,15 @@
 
 const jwt = require('jsonwebtoken');
 
+/**
+ * orders-api/src/middleware/auth.js
+ *
+ * Define los guards de autenticación del servicio de órdenes.
+ * `authenticate` valida JWT de usuario, `authenticateService` valida
+ * SERVICE_TOKEN y `authenticateAny` acepta cualquiera de los dos según la
+ * superficie HTTP que expone el Lambda o el operador.
+ */
+
 function authenticate(req, res, next) {
   const header = req.headers.authorization || '';
   const token  = header.startsWith('Bearer ') ? header.slice(7) : null;

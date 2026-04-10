@@ -1,5 +1,12 @@
 'use strict';
 
+/**
+ * orders-api/src/routes/index.js
+ *
+ * Agrupa los routers de productos y órdenes para montarlos desde app.js.
+ * Deja explícita la separación entre el dominio de catálogo y el de pedidos.
+ */
+
 const { Router }                          = require('express');
 const { authenticateAny, authenticate }   = require('../middleware/auth');
 const { createProduct, patchProduct,

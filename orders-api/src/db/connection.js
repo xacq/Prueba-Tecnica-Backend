@@ -1,5 +1,13 @@
 'use strict';
 
+/**
+ * orders-api/src/db/connection.js
+ *
+ * Crea y reutiliza el pool MySQL del servicio de órdenes.
+ * El pool se comparte entre el bootstrap HTTP y los controladores que leen
+ * productos, órdenes y order_items.
+ */
+
 const mysql = require('mysql2/promise');
 
 let pool = null;

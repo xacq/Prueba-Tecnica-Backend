@@ -1,5 +1,13 @@
 'use strict';
 
+/**
+ * customers-api/src/routes/customers.js
+ *
+ * Router declarativo del contrato HTTP de clientes.
+ * Mantiene visible la composición de rutas públicas e internas y documenta
+ * qué controladores y middlewares sostienen cada endpoint.
+ */
+
 const { Router } = require('express');
 const { authenticate, authenticateService } = require('../middleware/auth');
 const {

@@ -1,5 +1,19 @@
 'use strict';
 
+/**
+ * orders-api/src/app.js
+ *
+ * Punto de entrada HTTP del servicio de productos y órdenes.
+ * Monta el healthcheck, el router de productos, el router de órdenes y el
+ * error handler global.
+ *
+ * Dependencias cruzadas:
+ * - routes/index.js: composición de routers
+ * - middleware/auth.js: JWT de usuario y SERVICE_TOKEN
+ * - controllers/productController.js y controllers/orderController.js
+ * - db/connection.js: pool MySQL reutilizable
+ */
+
 require('dotenv').config();
 
 const express              = require('express');

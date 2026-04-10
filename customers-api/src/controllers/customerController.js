@@ -1,5 +1,18 @@
 'use strict';
 
+/**
+ * customers-api/src/controllers/customerController.js
+ *
+ * Implementa el CRUD de clientes, la búsqueda paginada y el endpoint interno.
+ * Valida entrada con Zod, consulta MySQL y expone el shape de respuesta que
+ * consumen Orders API y el Lambda orquestador.
+ *
+ * Dependencias cruzadas:
+ * - validators/customer.js: contratos de entrada
+ * - utils/paginate.js: cursor pagination
+ * - db/connection.js: pool MySQL compartido
+ */
+
 const { getPool }    = require('../db/connection');
 const { paginate }   = require('../utils/paginate');
 const {

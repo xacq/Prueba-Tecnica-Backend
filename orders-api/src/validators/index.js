@@ -1,5 +1,13 @@
 'use strict';
 
+/**
+ * orders-api/src/validators/index.js
+ *
+ * Centraliza los esquemas Zod para productos, órdenes y filtros de listado.
+ * Los controladores de productos y órdenes validan con estos contratos antes
+ * de tocar MySQL o de llamar a Customers API.
+ */
+
 const { z } = require('zod');
 
 // ── Productos ────────────────────────────────────────────────

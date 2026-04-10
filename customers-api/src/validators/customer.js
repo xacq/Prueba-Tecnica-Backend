@@ -1,5 +1,12 @@
 'use strict';
 
+/**
+ * customers-api/src/validators/customer.js
+ *
+ * Define los esquemas Zod para create, update y list de clientes.
+ * Se consume antes de ejecutar la lógica de customerController.js.
+ */
+
 const { z } = require('zod');
 
 const createCustomerSchema = z.object({

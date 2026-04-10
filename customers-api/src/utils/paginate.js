@@ -1,5 +1,12 @@
 'use strict';
 
+/**
+ * customers-api/src/utils/paginate.js
+ *
+ * Helper de cursor pagination para listados de clientes.
+ * Evita OFFSET y se comparte entre los listados del controller.
+ */
+
 const encodeCursor = (id) =>
   Buffer.from(String(id)).toString('base64');
 

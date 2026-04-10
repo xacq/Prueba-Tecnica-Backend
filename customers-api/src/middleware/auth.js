@@ -3,6 +3,14 @@
 const jwt = require('jsonwebtoken');
 
 /**
+ * customers-api/src/middleware/auth.js
+ *
+ * Define los guards de autenticación del servicio de clientes.
+ * `authenticate` valida JWT de usuario para las rutas públicas y
+ * `authenticateService` valida el SERVICE_TOKEN para el endpoint interno.
+ */
+
+/**
  * Verifica JWT de usuario para rutas públicas del backoffice.
  * Header esperado: Authorization: Bearer <token>
  */

@@ -1,6 +1,13 @@
 'use strict';
 
 /**
+ * orders-api/src/utils/customersClient.js
+ *
+ * Cliente HTTP para validar la existencia del cliente antes de crear órdenes.
+ * Se comunica con GET /internal/customers/:id usando SERVICE_TOKEN.
+ */
+
+/**
  * Llama a GET /internal/customers/:id en Customers API.
  * Usado por Orders API para validar que el cliente existe
  * antes de crear una orden.

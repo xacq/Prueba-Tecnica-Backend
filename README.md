@@ -17,6 +17,76 @@ Sistema de gestión de pedidos B2B compuesto por dos APIs REST, un Lambda orques
 └── README.md
 ```
 
+## Mapa documental y relaciones cruzadas
+
+> Nota de lectura: los archivos `app.js` son los puntos de entrada reales en runtime.
+> Los archivos `routes/*.js` documentan o agrupan la composición HTTP por dominio.
+> Los `openapi.yaml` deben permanecer alineados con los controladores y validadores.
+
+### Raíz y base de datos
+
+| Archivo | Responsabilidad | Relación cruzada |
+|---|---|---|
+| `README.md` | Índice profesional, guía de arranque y mapa de lectura del sistema. | Resume el comportamiento de `docker-compose.yml`, `db/schema.sql`, `db/seed.sql`, `customers-api`, `orders-api` y `lambda-orchestrator`. |
+| `docker-compose.yml` | Orquesta MySQL, Customers API y Orders API en local. | Usa `customers-api/Dockerfile`, `orders-api/Dockerfile`, `db/schema.sql` y `db/seed.sql`. |
+| `db/schema.sql` | Define tablas, FKs, índices y el contrato mínimo de persistencia. | Soporta `orders-api/src/controllers/orderController.js` y `lambda-orchestrator/src/db/idempotency.js`. |
+| `db/seed.sql` | Carga datos de ejemplo para clientes, productos, órdenes e idempotencia. | Se apoya en `db/schema.sql` y alimenta las pruebas descritas en `README.md`. |
+
+### Customers API
+
+| Archivo | Responsabilidad | Relación cruzada |
+|---|---|---|
+| `customers-api/package.json` | Scripts y dependencias del servicio de clientes. | Ejecuta `customers-api/src/app.js` y `customers-api/scripts/generate-token.js`. |
+| `customers-api/Dockerfile` | Construye la imagen del servicio de clientes. | Arranca `customers-api/src/app.js` y se consume desde `docker-compose.yml`. |
+| `customers-api/openapi.yaml` | Contrato OpenAPI 3.0 de clientes. | Debe coincidir con `src/app.js`, `controllers/customerController.js` y `middleware/auth.js`. |
+| `customers-api/scripts/generate-token.js` | Genera un JWT de desarrollo para probar rutas protegidas. | Se usa con `middleware/auth.js` y se documenta en esta guía. |
+| `customers-api/src/app.js` | Punto de entrada HTTP, healthcheck y montaje de rutas públicas/internas. | Depende de `middleware/auth.js`, `controllers/customerController.js`, `middleware/errorHandler.js` y `db/connection.js`. |
+| `customers-api/src/routes/customers.js` | Router declarativo del contrato de clientes. | Refuerza la misma superficie HTTP que `src/app.js` y consume `controllers/customerController.js`. |
+| `customers-api/src/controllers/customerController.js` | CRUD de clientes, búsqueda paginada y lookup interno. | Usa `validators/customer.js`, `utils/paginate.js` y `db/connection.js`. |
+| `customers-api/src/middleware/auth.js` | Valida JWT de usuario y `SERVICE_TOKEN`. | Protege las rutas montadas por `src/app.js` y el router de clientes. |
+| `customers-api/src/middleware/errorHandler.js` | Traduce errores de validación, duplicados y dominio a HTTP. | Recibe errores lanzados por `controllers/customerController.js`. |
+| `customers-api/src/validators/customer.js` | Esquemas Zod para create, update y list de clientes. | Se consumen antes de ejecutar la lógica de `controllers/customerController.js`. |
+| `customers-api/src/utils/paginate.js` | Helper de paginación por cursor sobre MySQL. | Lo utiliza `controllers/customerController.js` para listados consistentes. |
+| `customers-api/src/db/connection.js` | Pool MySQL compartido del servicio. | Lo consumen `src/app.js` y `controllers/customerController.js`. |
+
+### Orders API
+
+| Archivo | Responsabilidad | Relación cruzada |
+|---|---|---|
+| `orders-api/package.json` | Scripts y dependencias del servicio de órdenes. | Ejecuta `orders-api/src/app.js` y habilita pruebas de `controllers/*`. |
+| `orders-api/Dockerfile` | Construye la imagen del servicio de órdenes. | Arranca `orders-api/src/app.js` y se consume desde `docker-compose.yml`. |
+| `orders-api/openapi.yaml` | Contrato OpenAPI 3.0 de productos y órdenes. | Debe coincidir con `src/app.js`, `routes/index.js` y los controladores. |
+| `orders-api/src/app.js` | Punto de entrada HTTP, healthcheck y montaje de routers. | Depende de `routes/index.js`, `middleware/auth.js`, `middleware/errorHandler.js` y `db/connection.js`. |
+| `orders-api/src/routes/index.js` | Agrupa `productRouter` y `orderRouter`. | Centraliza la composición usada por `src/app.js`. |
+| `orders-api/src/controllers/productController.js` | CRUD de productos y stock. | Usa `validators/index.js` y `db/connection.js`. |
+| `orders-api/src/controllers/orderController.js` | Creación, consulta, confirmación y cancelación de órdenes. | Usa `validators/index.js`, `utils/customersClient.js`, `utils/paginate.js` y `db/connection.js`. |
+| `orders-api/src/middleware/auth.js` | Permite JWT de usuario y `SERVICE_TOKEN` según la ruta. | Protege `productRouter` y `orderRouter`. |
+| `orders-api/src/middleware/errorHandler.js` | Traduce errores de validación, duplicados y dominio a HTTP. | Recibe errores lanzados por los controladores de órdenes y productos. |
+| `orders-api/src/validators/index.js` | Esquemas Zod para productos, órdenes y filtros. | Se consumen en `controllers/productController.js` y `controllers/orderController.js`. |
+| `orders-api/src/utils/paginate.js` | Helper de paginación por cursor compartido por listados. | Lo usan `productController.js` y `orderController.js` para listados consistentes. |
+| `orders-api/src/utils/customersClient.js` | Cliente HTTP para validar clientes en Customers API. | Lo usa `controllers/orderController.js` para crear órdenes con cliente válido. |
+| `orders-api/src/db/connection.js` | Pool MySQL compartido del servicio. | Lo consumen `src/app.js` y los controladores de órdenes/productos. |
+
+### Lambda Orchestrator
+
+| Archivo | Responsabilidad | Relación cruzada |
+|---|---|---|
+| `lambda-orchestrator/package.json` | Scripts y dependencias del orquestador. | Ejecuta `src/handler.js` con `serverless-offline` o `serverless deploy`. |
+| `lambda-orchestrator/serverless.yml` | Configura runtime Node 22, variables y endpoint HTTP. | Apunta a `src/handler.js` y recibe `CUSTOMERS_API_BASE`, `ORDERS_API_BASE` y `SERVICE_TOKEN`. |
+| `lambda-orchestrator/db/migration_idempotency.sql` | Migración auxiliar para ajustar la tabla de idempotencia. | Complementa `db/schema.sql` y las funciones de `src/db/idempotency.js`. |
+| `lambda-orchestrator/src/handler.js` | Handler principal del flujo create-and-confirm-order. | Usa `src/apiClient.js` y `src/db/idempotency.js`. |
+| `lambda-orchestrator/src/apiClient.js` | Cliente HTTP con timeout, logging y errores tipados. | Consume Customers API y Orders API usando `SERVICE_TOKEN`. |
+| `lambda-orchestrator/src/db/connection.js` | Pool MySQL reutilizable para el manejo de idempotencia. | Lo consume `src/db/idempotency.js`. |
+| `lambda-orchestrator/src/db/idempotency.js` | Reserva, consulta y actualiza `idempotency_keys`. | Se usa desde `src/handler.js` para hacer el flujo replay-safe. |
+| `lambda-orchestrator/src/db/idempotency.test.js` | Pruebas unitarias del comportamiento de idempotencia. | Verifica la lógica implementada en `src/db/idempotency.js`. |
+
+### Regla de trazabilidad
+
+- Si cambias un controlador, actualiza su `openapi.yaml` y su validador asociado.
+- Si cambias persistencia, revisa `db/schema.sql`, `db/seed.sql` y las consultas de los controladores.
+- Si cambias el flujo orquestado, sincroniza `lambda-orchestrator/src/handler.js`, `src/apiClient.js` y `src/db/idempotency.js`.
+- Si cambias variables de entorno, actualiza el README, `docker-compose.yml` y `serverless.yml`.
+
 ---
 
 ## Opción A — Levantar con Docker Compose (recomendado)

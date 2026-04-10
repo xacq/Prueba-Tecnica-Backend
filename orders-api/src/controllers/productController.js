@@ -1,5 +1,13 @@
 'use strict';
 
+/**
+ * orders-api/src/controllers/productController.js
+ *
+ * Implementa el CRUD de productos y stock.
+ * Se apoya en los validadores de orders-api, el helper de paginación y el
+ * pool MySQL compartido.
+ */
+
 const { getPool }  = require('../db/connection');
 const { paginate } = require('../utils/paginate');
 const {

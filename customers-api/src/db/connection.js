@@ -1,5 +1,13 @@
 'use strict';
 
+/**
+ * customers-api/src/db/connection.js
+ *
+ * Crea y reutiliza el pool MySQL del servicio de clientes.
+ * El pool alimenta el bootstrap HTTP y los controladores que leen o escriben
+ * en la base de datos.
+ */
+
 const mysql = require('mysql2/promise');
 
 let pool = null;

@@ -1,5 +1,19 @@
 'use strict';
 
+/**
+ * orders-api/src/controllers/orderController.js
+ *
+ * Implementa creación, lectura, confirmación y cancelación de órdenes.
+ * Coordina validación, validación remota del cliente, transacciones MySQL,
+ * descuento y restauración de stock, y persistencia de idempotencia.
+ *
+ * Dependencias cruzadas:
+ * - validators/index.js: schemas de producto y orden
+ * - utils/customersClient.js: validación del cliente en Customers API
+ * - utils/paginate.js: listados por cursor
+ * - db/connection.js: pool MySQL
+ */
+
 const { getPool }            = require('../db/connection');
 const { paginate }           = require('../utils/paginate');
 const { getCustomerInternal} = require('../utils/customersClient');

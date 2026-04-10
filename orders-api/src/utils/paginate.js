@@ -1,5 +1,12 @@
 'use strict';
 
+/**
+ * orders-api/src/utils/paginate.js
+ *
+ * Helper de cursor pagination para listados de productos y órdenes.
+ * Evita OFFSET y mantiene el acceso por índice sobre id.
+ */
+
 const encodeCursor = (id) =>
   Buffer.from(String(id)).toString('base64');
 

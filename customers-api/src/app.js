@@ -1,5 +1,19 @@
 'use strict';
 
+/**
+ * customers-api/src/app.js
+ *
+ * Punto de entrada HTTP del servicio de clientes.
+ * Monta el healthcheck, las rutas públicas de /customers y el endpoint
+ * interno /internal/customers/:id que consume Orders API y el Lambda.
+ *
+ * Dependencias cruzadas:
+ * - middleware/auth.js: JWT de usuario y SERVICE_TOKEN
+ * - controllers/customerController.js: CRUD y lookup interno
+ * - db/connection.js: pool MySQL reutilizable
+ * - middleware/errorHandler.js: traducción uniforme de errores
+ */
+
 require('dotenv').config();
 
 const express          = require('express');

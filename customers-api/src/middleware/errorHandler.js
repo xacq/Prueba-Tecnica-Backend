@@ -1,5 +1,12 @@
 'use strict';
 
+/**
+ * customers-api/src/middleware/errorHandler.js
+ *
+ * Normaliza respuestas de error para validación, duplicados, errores de
+ * dominio y fallos inesperados. Se monta al final de app.js.
+ */
+
 const { ZodError } = require('zod');
 
 function errorHandler(err, req, res, next) {
