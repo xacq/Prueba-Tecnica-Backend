@@ -1,0 +1,107 @@
+version: '3.9'
+
+# ─────────────────────────────────────────────────────────────
+# Red interna: los servicios se comunican por nombre de servicio
+# (customers-api:3001, orders-api:3002, mysql:3306)
+# ─────────────────────────────────────────────────────────────
+networks:
+  backoffice:
+    driver: bridge
+
+# ─────────────────────────────────────────────────────────────
+# Volumen persistente para que los datos de MySQL sobrevivan
+# a docker-compose down (sin --volumes)
+# ─────────────────────────────────────────────────────────────
+volumes:
+  mysql_data:
+
+services:
+
+  # ── MySQL ────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: backoffice-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-secret}
+      MYSQL_DATABASE:      ${MYSQL_DATABASE:-backoffice}
+    ports:
+      - "3306:3306"       # expuesto al host para XAMPP-style access o herramientas GUI
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    networks:
+      - backoffice
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost",
+             "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-secret}"]
+      interval: 10s
+      timeout:  5s
+      retries:  10
+      start_period: 30s
+
+  # ── Customers API ────────────────────────────────────────────
+  customers-api:
+    build:
+      context:    ./customers-api
+      dockerfile: Dockerfile
+    container_name: backoffice-customers
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PORT:          3001
+      NODE_ENV:      ${NODE_ENV:-production}
+      DB_HOST:       mysql          # nombre del servicio en la red interna
+      DB_PORT:       3306
+      DB_NAME:       ${MYSQL_DATABASE:-backoffice}
+      DB_USER:       root
+      DB_PASS:       ${MYSQL_ROOT_PASSWORD:-secret}
+      JWT_SECRET:    ${JWT_SECRET:-dev-jwt-secret}
+      SERVICE_TOKEN: ${SERVICE_TOKEN:-dev-service-token}
+    ports:
+      - "3001:3001"
+    networks:
+      - backoffice
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+      interval: 15s
+      timeout:  5s
+      retries:  5
+      start_period: 20s
+
+  # ── Orders API ───────────────────────────────────────────────
+  orders-api:
+    build:
+      context:    ./orders-api
+      dockerfile: Dockerfile
+    container_name: backoffice-orders
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      customers-api:
+        condition: service_healthy
+    environment:
+      PORT:                   3002
+      NODE_ENV:               ${NODE_ENV:-production}
+      DB_HOST:                mysql
+      DB_PORT:                3306
+      DB_NAME:                ${MYSQL_DATABASE:-backoffice}
+      DB_USER:                root
+      DB_PASS:                ${MYSQL_ROOT_PASSWORD:-secret}
+      JWT_SECRET:             ${JWT_SECRET:-dev-jwt-secret}
+      SERVICE_TOKEN:          ${SERVICE_TOKEN:-dev-service-token}
+      CUSTOMERS_INTERNAL_URL: http://customers-api:3001  # red interna Docker
+    ports:
+      - "3002:3002"
+    networks:
+      - backoffice
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
+      interval: 15s
+      timeout:  5s
+      retries:  5
+      start_period: 20s

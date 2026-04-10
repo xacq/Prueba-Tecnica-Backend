@@ -1,0 +1,183 @@
+openapi: 3.0.3
+info:
+  title: Customers API
+  description: Gestión de clientes para el Backoffice B2B
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3001
+    description: Desarrollo local
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    ServiceToken:
+      type: http
+      scheme: bearer
+      description: SERVICE_TOKEN para comunicación entre servicios
+
+  schemas:
+    Customer:
+      type: object
+      properties:
+        id:         { type: integer, example: 1 }
+        name:       { type: string,  example: "ACME Corporation" }
+        email:      { type: string,  format: email, example: "ops@acme.com" }
+        phone:      { type: string,  nullable: true, example: "+593 99 111 2233" }
+        created_at: { type: string,  format: date-time }
+        updated_at: { type: string,  format: date-time }
+
+    Pagination:
+      type: object
+      properties:
+        nextCursor: { type: string, nullable: true }
+        hasMore:    { type: boolean }
+        limit:      { type: integer }
+
+    Error:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        error:   { type: string }
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Servicio y DB operativos
+          content:
+            application/json:
+              example: { status: ok, service: customers-api, db: ok }
+
+  /customers:
+    post:
+      summary: Crear cliente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email]
+              properties:
+                name:  { type: string, example: "ACME Corporation" }
+                email: { type: string, example: "ops@acme.com" }
+                phone: { type: string, example: "+593 99 111 2233" }
+      responses:
+        '201':
+          description: Cliente creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:    { $ref: '#/components/schemas/Customer' }
+        '400': { description: Validación fallida }
+        '409': { description: Email duplicado }
+
+    get:
+      summary: Listar clientes con búsqueda y paginación
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+          description: Busca en name y email
+        - in: query
+          name: cursor
+          schema: { type: string }
+          description: Cursor de paginación (base64 del último ID)
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+      responses:
+        '200':
+          description: Lista paginada de clientes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:    { type: boolean }
+                  data:       { type: array, items: { $ref: '#/components/schemas/Customer' } }
+                  pagination: { $ref: '#/components/schemas/Pagination' }
+
+  /customers/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: integer }
+
+    get:
+      summary: Obtener cliente por ID
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:    { $ref: '#/components/schemas/Customer' }
+        '404': { description: Cliente no encontrado }
+
+    put:
+      summary: Actualizar cliente
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:  { type: string }
+                email: { type: string }
+                phone: { type: string, nullable: true }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:    { $ref: '#/components/schemas/Customer' }
+        '404': { description: Cliente no encontrado }
+        '409': { description: Email duplicado }
+
+    delete:
+      summary: Eliminar cliente (soft-delete)
+      responses:
+        '204': { description: Eliminado exitosamente }
+        '404': { description: Cliente no encontrado }
+
+  /internal/customers/{id}:
+    get:
+      summary: Obtener cliente (uso interno entre servicios)
+      security:
+        - ServiceToken: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:    { $ref: '#/components/schemas/Customer' }
+        '401': { description: Service token inválido }
+        '404': { description: Cliente no encontrado }

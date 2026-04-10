@@ -1,0 +1,293 @@
+openapi: 3.0.3
+info:
+  title: Orders API
+  description: Gestión de productos y órdenes para el Backoffice B2B
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3002
+    description: Desarrollo local
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    ServiceToken:
+      type: http
+      scheme: bearer
+
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:          { type: integer }
+        sku:         { type: string, example: "LAPTOP-001" }
+        name:        { type: string, example: "Laptop Lenovo ThinkPad X1" }
+        price_cents: { type: integer, example: 129900 }
+        stock:       { type: integer, example: 15 }
+        created_at:  { type: string, format: date-time }
+        updated_at:  { type: string, format: date-time }
+
+    OrderItem:
+      type: object
+      properties:
+        id:               { type: integer }
+        product_id:       { type: integer }
+        qty:              { type: integer }
+        unit_price_cents: { type: integer }
+        subtotal_cents:   { type: integer }
+
+    Order:
+      type: object
+      properties:
+        id:              { type: integer }
+        customer_id:     { type: integer }
+        status:          { type: string, enum: [CREATED, CONFIRMED, CANCELED] }
+        total_cents:     { type: integer }
+        confirmed_at:    { type: string, format: date-time, nullable: true }
+        canceled_at:     { type: string, format: date-time, nullable: true }
+        canceled_by:     { type: string, nullable: true }
+        created_at:      { type: string, format: date-time }
+        updated_at:      { type: string, format: date-time }
+        items:           { type: array, items: { $ref: '#/components/schemas/OrderItem' } }
+
+    Pagination:
+      type: object
+      properties:
+        nextCursor: { type: string, nullable: true }
+        hasMore:    { type: boolean }
+        limit:      { type: integer }
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          content:
+            application/json:
+              example: { status: ok, service: orders-api, db: ok }
+
+  /products:
+    post:
+      summary: Crear producto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sku, name, price_cents]
+              properties:
+                sku:         { type: string }
+                name:        { type: string }
+                price_cents: { type: integer, minimum: 1 }
+                stock:       { type: integer, minimum: 0, default: 0 }
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:    { $ref: '#/components/schemas/Product' }
+
+    get:
+      summary: Listar productos
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: cursor
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:    { type: boolean }
+                  data:       { type: array, items: { $ref: '#/components/schemas/Product' } }
+                  pagination: { $ref: '#/components/schemas/Pagination' }
+
+  /products/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: integer }
+    get:
+      summary: Obtener producto por ID
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:    { $ref: '#/components/schemas/Product' }
+        '404': { description: Producto no encontrado }
+    patch:
+      summary: Actualizar precio y/o stock
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                price_cents: { type: integer }
+                stock:       { type: integer }
+                name:        { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:    { $ref: '#/components/schemas/Product' }
+
+  /orders:
+    post:
+      summary: Crear orden
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [customer_id, items]
+              properties:
+                customer_id:
+                  type: integer
+                  example: 1
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required: [product_id, qty]
+                    properties:
+                      product_id: { type: integer }
+                      qty:        { type: integer, minimum: 1 }
+                idempotency_key:
+                  type: string
+                  example: "abc-123"
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:    { $ref: '#/components/schemas/Order' }
+        '404': { description: Cliente o producto no encontrado }
+        '422': { description: Stock insuficiente }
+
+    get:
+      summary: Listar órdenes con filtros
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [CREATED, CONFIRMED, CANCELED] }
+        - in: query
+          name: from
+          schema: { type: string, format: date-time }
+        - in: query
+          name: to
+          schema: { type: string, format: date-time }
+        - in: query
+          name: cursor
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:    { type: boolean }
+                  data:       { type: array, items: { $ref: '#/components/schemas/Order' } }
+                  pagination: { $ref: '#/components/schemas/Pagination' }
+
+  /orders/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: integer }
+    get:
+      summary: Obtener orden con items
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:    { $ref: '#/components/schemas/Order' }
+        '404': { description: Orden no encontrada }
+
+  /orders/{id}/confirm:
+    post:
+      summary: Confirmar orden (idempotente)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: header
+          name: X-Idempotency-Key
+          required: true
+          schema: { type: string }
+          description: Clave única para garantizar idempotencia en reintentos
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:    { $ref: '#/components/schemas/Order' }
+        '400': { description: Header X-Idempotency-Key faltante }
+        '404': { description: Orden no encontrada }
+        '422': { description: La orden no está en estado CREATED }
+
+  /orders/{id}/cancel:
+    post:
+      summary: Cancelar orden (restaura stock)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:    { $ref: '#/components/schemas/Order' }
+        '404': { description: Orden no encontrada }
+        '422': { description: "Orden ya cancelada o ventana de 10 min expirada" }

@@ -1,0 +1,31 @@
+{
+  "name": "lambda-orchestrator",
+  "version": "1.0.0",
+  "description": "Lambda orquestador para create-and-confirm-order",
+  "main": "src/handler.js",
+  "scripts": {
+    "dev":   "serverless offline",
+    "build": "echo 'No build step needed for JS runtime'",
+    "test":  "jest --coverage",
+    "deploy": "serverless deploy"
+  },
+  "dependencies": {
+    "mysql2": "^3.9.0"
+  },
+  "devDependencies": {
+    "jest":               "^29.7.0",
+    "serverless":         "^3.38.0",
+    "serverless-offline": "^13.6.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/**/*.test.js"
+    ]
+  }
+}
