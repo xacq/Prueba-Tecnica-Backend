@@ -84,10 +84,10 @@ Revisar PR para observaciones iniciales para cumplimiento de requerimientos inic
 
 ### Regla de trazabilidad
 
-- Si cambias un controlador, actualiza su `openapi.yaml` y su validador asociado.
-- Si cambias persistencia, revisa `db/schema.sql`, `db/seed.sql` y las consultas de los controladores.
-- Si cambias el flujo orquestado, sincroniza `lambda-orchestrator/src/handler.js`, `src/apiClient.js` y `src/db/idempotency.js`.
-- Si cambias variables de entorno, actualiza el README, `docker-compose.yml` y `serverless.yml`.
+- Si cambia un controlador, actualizar su `openapi.yaml` y su validador asociado.
+- Si cambia persistencia, revisar `db/schema.sql`, `db/seed.sql` y las consultas de los controladores.
+- Si cambia el flujo orquestado, sincronizar `lambda-orchestrator/src/handler.js`, `src/apiClient.js` y `src/db/idempotency.js`.
+- Si cambia variables de entorno, actualizar el README, `docker-compose.yml` y `serverless.yml`.
 
 ---
 
@@ -439,6 +439,6 @@ serverless deploy --stage prod
 
 ## Notas sobre XAMPP vs Docker
 
-Cuando usas **XAMPP** el Lambda y los scripts locales de Node apuntan a `localhost`. Cuando usas **Docker Compose**, los servicios se comunican por nombre de servicio (`customers-api`, `orders-api`, `mysql`). Las variables de entorno en `docker-compose.yml` ya están configuradas con los nombres correctos para la red interna de Docker.
+Cuando use **XAMPP** el Lambda y los scripts locales de Node apuntan a `localhost`. Cuando use **Docker Compose**, los servicios se comunican por nombre de servicio (`customers-api`, `orders-api`, `mysql`). Las variables de entorno en `docker-compose.yml` ya están configuradas con los nombres correctos para la red interna de Docker.
 
 El Lambda **siempre corre fuera de Docker** (con `serverless-offline`), por lo que su `.env` siempre debe apuntar a `localhost:3001` y `localhost:3002`.
