@@ -72,6 +72,24 @@ async function checkIdempotency(pool, key) {
   return row || null;
 }
 
+async function loadOrderByIdempotencyKey(pool, key) {
+  const [[order]] = await pool.execute(
+    `SELECT * FROM orders
+     WHERE idempotency_key = ?
+     LIMIT 1`,
+    [key]
+  );
+
+  if (!order) return null;
+
+  const [items] = await pool.execute(
+    `SELECT * FROM order_items WHERE order_id = ?`,
+    [order.id]
+  );
+
+  return { order, items: items.map(formatItem) };
+}
+
 // Guarda resultado en idempotency_keys
 async function saveIdempotency(pool, { key, status, httpStatus,
   responseBody, targetType, targetId }) {
@@ -87,6 +105,17 @@ async function saveIdempotency(pool, { key, status, httpStatus,
     [key, targetType, targetId, status, httpStatus,
       JSON.stringify(responseBody), expiresAt]
   );
+}
+
+async function saveIdempotencySafely(pool, payload, context) {
+  try {
+    await saveIdempotency(pool, payload);
+  } catch (saveErr) {
+    console.warn(
+      `[orders-api] No se pudo guardar idempotency key en ${context}:`,
+      saveErr.message
+    );
+  }
 }
 
 // ─── POST /orders ────────────────────────────────────────────
@@ -107,6 +136,28 @@ async function createOrder(req, res, next) {
           .status(cached.http_status)
           .set('X-Idempotent-Replay', 'true')
           .json(body);
+      }
+
+      const existing = await loadOrderByIdempotencyKey(pool, data.idempotency_key);
+      if (existing) {
+        const responseData = {
+          success: true,
+          data:    formatOrder(existing.order, existing.items),
+        };
+
+        await saveIdempotencySafely(pool, {
+          key:          data.idempotency_key,
+          status:       'success',
+          httpStatus:   201,
+          responseBody: responseData,
+          targetType:   'order',
+          targetId:     existing.order.id,
+        }, 'createOrder replay');
+
+        return res
+          .status(201)
+          .set('X-Idempotent-Replay', 'true')
+          .json(responseData);
       }
     }
 
@@ -178,6 +229,30 @@ async function createOrder(req, res, next) {
       await conn.commit();
     } catch (txErr) {
       await conn.rollback();
+      if (data.idempotency_key && txErr.code === 'ER_DUP_ENTRY') {
+        const replay = await loadOrderByIdempotencyKey(pool, data.idempotency_key);
+        if (replay) {
+          const responseData = {
+            success: true,
+            data:    formatOrder(replay.order, replay.items),
+          };
+
+          await saveIdempotencySafely(pool, {
+            key:          data.idempotency_key,
+            status:       'success',
+            httpStatus:   201,
+            responseBody: responseData,
+            targetType:   'order',
+            targetId:     replay.order.id,
+          }, 'createOrder duplicate replay');
+
+          return res
+            .status(201)
+            .set('X-Idempotent-Replay', 'true')
+            .json(responseData);
+        }
+      }
+
       throw txErr;
     } finally {
       conn.release();
@@ -198,14 +273,14 @@ async function createOrder(req, res, next) {
 
     // 5. Guardar en idempotency_keys para futuros reintentos
     if (data.idempotency_key) {
-      await saveIdempotency(pool, {
+      await saveIdempotencySafely(pool, {
         key:          data.idempotency_key,
         status:       'success',
         httpStatus:   201,
         responseBody: responseData,
         targetType:   'order',
         targetId:     orderId,
-      });
+      }, 'createOrder success');
     }
 
     res.status(201).json(responseData);
@@ -328,14 +403,14 @@ async function confirmOrder(req, res, next) {
     };
 
     // 4. Guardar en idempotency_keys
-    await saveIdempotency(pool, {
+    await saveIdempotencySafely(pool, {
       key:          idempotencyKey,
       status:       'success',
       httpStatus:   200,
       responseBody: responseData,
       targetType:   'order',
       targetId:     updated.id,
-    });
+    }, 'confirmOrder');
 
     res.json(responseData);
   } catch (e) { next(e); }
