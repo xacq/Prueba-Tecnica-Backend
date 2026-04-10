@@ -1,4 +1,4 @@
-# Backoffice B2B — Monorepo
+# B2B — Monorepo
 
 Sistema de gestión de pedidos B2B compuesto por dos APIs REST, un Lambda orquestador y una base de datos MySQL.
 
