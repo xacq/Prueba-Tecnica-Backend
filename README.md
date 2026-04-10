@@ -1,6 +1,8 @@
-# Backoffice B2B — Monorepo
+# B2B — Monorepo
 
 Sistema de gestión de pedidos B2B compuesto por dos APIs REST, un Lambda orquestador y una base de datos MySQL.
+
+Revisar PR para observaciones iniciales para cumplimiento de requerimientos iniciales ([Comentario](https://github.com/xacq/Prueba-Tecnica-Backend/pull/1#issuecomment-4225644046)) y PR pendiente (Mejoras a aprobar https://github.com/xacq/Prueba-Tecnica-Backend/pull/1#issue-4240772804)
 
 ## Estructura del repositorio
 
